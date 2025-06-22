@@ -12,22 +12,23 @@ const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ✅ CORS: permitir sólo frontend de Netlify
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: process.env.FRONTEND_URL || "*",
   methods: ["GET", "POST", "DELETE"],
-  credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🌩️ Configurar Cloudinary
+// 🌩️ Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 📸 Multer para imágenes (Cloudinary)
+// 📸 Multer - Cloudinary
 const imageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -38,7 +39,7 @@ const imageStorage = new CloudinaryStorage({
 });
 const uploadImages = multer({ storage: imageStorage });
 
-// 📁 Multer para archivos Excel locales
+// 📁 Multer - Excel local
 const uploadExcel = multer({
   dest: "uploads/",
   fileFilter: (req, file, cb) => {
@@ -71,7 +72,7 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
       );
     }
 
-    fs.unlinkSync(req.file.path); // Borra el archivo temporal luego de usarlo
+    fs.unlinkSync(req.file.path);
     res.json({ message: "✅ Repuestos cargados desde Excel" });
   } catch (error) {
     console.error("❌ Error al procesar Excel:", error);
@@ -132,4 +133,7 @@ app.get("/repuestos", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));
+// 🟢 Arranque del servidor
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
+});
