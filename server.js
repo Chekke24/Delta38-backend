@@ -71,11 +71,11 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   const precios = fila["PRECIOS"];
   const preciosNum = precios && !isNaN(precios) ? parseFloat(precios) : null;
 
-  const inventario = fila["IMPORTE INVENTARIO"];
+  const inventario = fila["IMPORTE_INVENTARIO"];
   const inventarioNum = inventario && !isNaN(inventario) ? parseFloat(inventario) : null;
 
   await pool.query(
-    `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE INVENTARIO")
+    `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
   );
