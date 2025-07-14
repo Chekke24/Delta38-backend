@@ -74,6 +74,7 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
     const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { raw: false });
 
     for (const fila of datos) {
+      console.log(fila);
   const codigo = fila["CODIGO"]?.toString().trim() || "";
   const marca = fila["MARCA"]?.toString().trim() || "";
   const entradas = parseInt(fila["ENTRADAS"]) || 0;
