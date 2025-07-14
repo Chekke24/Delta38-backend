@@ -11,23 +11,23 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS
+// CORS
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: "https://delta38-frontend.netlify.app", // importante para evitar errores CORS
   methods: ["GET", "POST", "DELETE"],
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🌩️ Cloudinary
+// Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 📸 Multer - Cloudinary
+// Multer - Cloudinary
 const imageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -38,7 +38,7 @@ const imageStorage = new CloudinaryStorage({
 });
 const uploadImages = multer({ storage: imageStorage });
 
-// 📁 Multer - Excel en memoria
+// Multer - Excel en memoria
 const uploadExcel = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
@@ -50,38 +50,30 @@ const uploadExcel = multer({
   }
 });
 
-// 🏠 Ruta base
+// Ruta base
 app.get("/", (req, res) => {
-  res.json({ message: "✅ Servidor del taller funcionando con PostgreSQL + Cloudinary + Excel" });
+  res.json({ message: "✅ Servidor funcionando con PostgreSQL + Cloudinary + Excel" });
 });
 
-// 🧾 Carga de stock desde Excel
+// Cargar Excel
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.SheetNames.find(name => name.toLowerCase().includes("inventario")) || workbook.SheetNames[0];
-
-    const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], {
-      raw: false,
-      defval: "" // previene undefined
-    });
+    const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { raw: false });
 
     for (const fila of datos) {
       const codigo = fila["CODIGO"]?.toString().trim() || "";
       const marca = fila["MARCA"]?.toString().trim() || "";
+      const entradas = parseInt(fila["ENTRADAS"]) || 0;
+      const salidas = parseInt(fila["SALIDAS"]) || 0;
+      const stock = parseInt(fila["STOCK"]) || 0;
 
-      const entradas = parseInt(fila["ENTRADAS"]?.toString().replace(/\D/g, "")) || 0;
-      const salidas = parseInt(fila["SALIDAS"]?.toString().replace(/\D/g, "")) || 0;
-      const stock = parseInt(fila["STOCK"]?.toString().replace(/\D/g, "")) || 0;
-
-      const preciosStr = fila["PRECIOS"]?.toString().replace(/[^0-9.,]/g, '').replace(',', '.') || '';
+      const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
       const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
 
-      const inventarioStr = fila["IMPORTE INVENTARIO"]?.toString().replace(/[^0-9.,]/g, '').replace(',', '.') || '';
+      const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
       const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
-
-      // ✅ evitar insertar filas vacías
-      if (!codigo || !marca) continue;
 
       await pool.query(
         `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
@@ -97,7 +89,18 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   }
 });
 
-// 🖼️ Subida de imágenes ilustrativas
+// Eliminar todos los repuestos
+app.delete("/stock/eliminar-todo", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM repuestos");
+    res.json({ message: "✅ Todos los repuestos fueron eliminados." });
+  } catch (error) {
+    console.error("❌ Error al eliminar repuestos:", error);
+    res.status(500).json({ error: "Error al eliminar repuestos" });
+  }
+});
+
+// Subida de imágenes
 app.post("/imagenes", uploadImages.array("imagenes", 10), async (req, res) => {
   try {
     for (let i = 0; i < req.files.length; i++) {
@@ -119,7 +122,7 @@ app.post("/imagenes", uploadImages.array("imagenes", 10), async (req, res) => {
   }
 });
 
-// 🔍 Buscador inteligente
+// Buscador
 app.get("/repuestos", async (req, res) => {
   const { query } = req.query;
   if (!query) return res.status(400).json({ error: "Falta el parámetro de búsqueda" });
@@ -148,7 +151,7 @@ app.get("/repuestos", async (req, res) => {
   }
 });
 
-// 🟢 Arranque del servidor
+// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });

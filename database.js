@@ -3,40 +3,28 @@ require("dotenv").config();
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // necesario para Railway
+  ssl: { rejectUnauthorized: false },
 });
 
-// 🗑️ Eliminar la tabla 'repuestos' si ya existe
-pool.query("DROP TABLE IF EXISTS repuestos", (err) => {
-  if (err) {
-    console.error("❌ Error al eliminar tabla 'repuestos':", err.message);
-  } else {
-    console.log("🗑️ Tabla 'repuestos' eliminada correctamente.");
-
-    // 🧱 Crear tabla de repuestos con columnas adaptadas al Excel
-    pool.query(
-      `CREATE TABLE IF NOT EXISTS repuestos (
-        id SERIAL PRIMARY KEY,
-        "CODIGO" TEXT,
-        "MARCA" TEXT,
-        "ENTRADAS" INTEGER,
-        "SALIDAS" INTEGER,
-        "STOCK" INTEGER,
-        "PRECIOS" NUMERIC,
-        "IMPORTE_INVENTARIO" NUMERIC
-      );`,
-      (err) => {
-        if (err) {
-          console.error("❌ Error al crear tabla 'repuestos':", err.message);
-        } else {
-          console.log("✅ Tabla 'repuestos' recreada con éxito.");
-        }
-      }
-    );
+// Crear tabla de repuestos si no existe
+pool.query(
+  `CREATE TABLE IF NOT EXISTS repuestos (
+    id SERIAL PRIMARY KEY,
+    "CODIGO" TEXT,
+    "MARCA" TEXT,
+    "ENTRADAS" INTEGER,
+    "SALIDAS" INTEGER,
+    "STOCK" INTEGER,
+    "PRECIOS" NUMERIC,
+    "IMPORTE_INVENTARIO" NUMERIC
+  );`,
+  (err) => {
+    if (err) console.error("❌ Error creando tabla repuestos:", err.message);
+    else console.log("✅ Tabla repuestos verificada.");
   }
-});
+);
 
-// ✅ Crear tabla de imágenes ilustrativas (no se borra, solo se verifica)
+// Tabla imágenes
 pool.query(
   `CREATE TABLE IF NOT EXISTS imagenes_ilustrativas (
     id SERIAL PRIMARY KEY,
@@ -44,11 +32,8 @@ pool.query(
     url TEXT NOT NULL
   );`,
   (err) => {
-    if (err) {
-      console.error("❌ Error al crear tabla 'imagenes_ilustrativas':", err.message);
-    } else {
-      console.log("✅ Tabla 'imagenes_ilustrativas' verificada.");
-    }
+    if (err) console.error("❌ Error creando tabla imágenes:", err.message);
+    else console.log("✅ Tabla imágenes verificada.");
   }
 );
 
