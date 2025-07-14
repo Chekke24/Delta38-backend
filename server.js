@@ -54,7 +54,7 @@ const uploadExcel = multer({
 app.get("/", (req, res) => {
   res.json({ message: "✅ Servidor del taller funcionando con PostgreSQL + Cloudinary + Excel" });
 });
-
+// 
 // 📦 Subida de archivo Excel
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
