@@ -18,6 +18,7 @@
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
     "pg": "^8.16.0",
+    "psql": "^0.0.1",
     "xlsx": "^0.18.5"
   }
 }
