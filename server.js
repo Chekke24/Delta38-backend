@@ -12,7 +12,10 @@ const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS: permitir sólo frontend de Netlify
+// ✅ Asegurar que el directorio de uploads exista
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+
+// ✅ CORS: permitir sólo frontend de Netlify (o todos en desarrollo)
 app.use(cors({
   origin: process.env.FRONTEND_URL || "*",
   methods: ["GET", "POST", "DELETE"],
@@ -21,14 +24,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🌩️ Cloudinary
+// 🌩️ Configuración de Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 📸 Multer - Cloudinary
+// 📸 Almacenamiento de imágenes en Cloudinary
 const imageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -39,7 +42,7 @@ const imageStorage = new CloudinaryStorage({
 });
 const uploadImages = multer({ storage: imageStorage });
 
-// 📁 Multer - Excel local
+// 📁 Almacenamiento de archivos Excel en carpeta local
 const uploadExcel = multer({
   dest: "uploads/",
   fileFilter: (req, file, cb) => {
@@ -59,6 +62,11 @@ app.get("/", (req, res) => {
 // 📦 Subida de archivo Excel
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
+    // Validación extra
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ error: "No se recibió el archivo Excel" });
+    }
+
     const workbook = XLSX.readFile(req.file.path, { type: "file" });
     const sheet = workbook.SheetNames[0];
     const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
@@ -72,7 +80,7 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
       );
     }
 
-    fs.unlinkSync(req.file.path);
+    fs.unlinkSync(req.file.path); // Eliminar archivo temporal
     res.json({ message: "✅ Repuestos cargados desde Excel" });
   } catch (error) {
     console.error("❌ Error al procesar Excel:", error);
@@ -133,7 +141,7 @@ app.get("/repuestos", async (req, res) => {
   }
 });
 
-// 🟢 Arranque del servidor
+// 🟢 Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });
