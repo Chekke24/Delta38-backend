@@ -64,15 +64,17 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
     for (const fila of datos) {
   const codigo = fila["CODIGO"]?.toString().trim() || "";
   const marca = fila["MARCA"]?.toString().trim() || "";
+
   const entradas = parseInt(fila["ENTRADAS"]) || 0;
   const salidas = parseInt(fila["SALIDAS"]) || 0;
   const stock = parseInt(fila["STOCK"]) || 0;
 
-  const precios = fila["PRECIOS"];
-  const preciosNum = precios && !isNaN(precios) ? parseFloat(precios) : null;
+  // 🔽 Limpiar símbolo $, espacios, puntos y guiones
+  const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
+  const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
 
-  const inventario = fila["IMPORTE_INVENTARIO"];
-  const inventarioNum = inventario && !isNaN(inventario) ? parseFloat(inventario) : null;
+  const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
+  const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
 
   await pool.query(
     `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
