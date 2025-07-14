@@ -7,31 +7,27 @@ const { v2: cloudinary } = require("cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const XLSX = require("xlsx");
 const path = require("path");
-const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ Asegurar que el directorio de uploads exista
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
-
-// ✅ CORS: permitir sólo frontend de Netlify (o todos en desarrollo)
+// ✅ CORS
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: "*", // Podés restringirlo si querés usando: process.env.FRONTEND_URL
   methods: ["GET", "POST", "DELETE"],
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🌩️ Configuración de Cloudinary
+// 🌩️ Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 📸 Almacenamiento de imágenes en Cloudinary
+// 📸 Multer - Cloudinary
 const imageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -42,9 +38,9 @@ const imageStorage = new CloudinaryStorage({
 });
 const uploadImages = multer({ storage: imageStorage });
 
-// 📁 Almacenamiento de archivos Excel en carpeta local
+// 📁 Multer - Excel en memoria (para evitar escritura en disco)
 const uploadExcel = multer({
-  dest: "uploads/",
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (![".xlsx", ".xls", ".xlsm"].includes(ext)) {
@@ -62,12 +58,7 @@ app.get("/", (req, res) => {
 // 📦 Subida de archivo Excel
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
-    // Validación extra
-    if (!req.file || !req.file.path) {
-      return res.status(400).json({ error: "No se recibió el archivo Excel" });
-    }
-
-    const workbook = XLSX.readFile(req.file.path, { type: "file" });
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.SheetNames[0];
     const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
 
@@ -80,7 +71,6 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
       );
     }
 
-    fs.unlinkSync(req.file.path); // Eliminar archivo temporal
     res.json({ message: "✅ Repuestos cargados desde Excel" });
   } catch (error) {
     console.error("❌ Error al procesar Excel:", error);
@@ -141,7 +131,7 @@ app.get("/repuestos", async (req, res) => {
   }
 });
 
-// 🟢 Iniciar servidor
+// 🟢 Arranque del servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });
