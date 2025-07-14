@@ -11,11 +11,22 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS
+const allowedOrigins = [
+  "http://localhost:3000",                   // frontend local
+  "https://delta38-frontend.netlify.app"    // frontend en producción
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS no permitido"));
+    }
+  },
   methods: ["GET", "POST", "DELETE"],
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
