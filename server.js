@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // ✅ CORS
 app.use(cors({
-  origin: "*", // Podés restringirlo si querés usando: process.env.FRONTEND_URL
+  origin: process.env.FRONTEND_URL || "*",
   methods: ["GET", "POST", "DELETE"],
 }));
 
@@ -38,7 +38,7 @@ const imageStorage = new CloudinaryStorage({
 });
 const uploadImages = multer({ storage: imageStorage });
 
-// 📁 Multer - Excel en memoria (para evitar escritura en disco)
+// 📁 Multer - Excel en memoria
 const uploadExcel = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
@@ -63,11 +63,20 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
     const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
 
     for (const fila of datos) {
-      const { categoria, marca, modelo, codigo, descripcion } = fila;
+      const {
+        CODIGO: codigo,
+        MARCA: marca,
+        ENTRADAS: entradas,
+        SALIDAS: salidas,
+        STOCK: stock,
+        PRECIOS: precios,
+        "IMPORTE INVENTARIO": importe_inventario
+      } = fila;
+
       await pool.query(
-        `INSERT INTO repuestos (categoria, marca, modelo, codigo, descripcion)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [categoria || "", marca || "", modelo || "", codigo || "", descripcion || ""]
+        `INSERT INTO repuestos (codigo, marca, entradas, salidas, stock, precios, importe_inventario)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [codigo || "", marca || "", parseInt(entradas) || 0, parseInt(salidas) || 0, parseInt(stock) || 0, precios || "", importe_inventario || ""]
       );
     }
 
@@ -108,10 +117,8 @@ app.get("/repuestos", async (req, res) => {
   try {
     const productos = await pool.query(
       `SELECT * FROM repuestos
-       WHERE LOWER(categoria) LIKE $1
-       OR LOWER(marca) LIKE $1
-       OR LOWER(modelo) LIKE $1
-       OR LOWER(codigo) LIKE $1`,
+       WHERE LOWER(codigo) LIKE $1
+       OR LOWER(marca) LIKE $1`,
       [`%${query.toLowerCase()}%`]
     );
 

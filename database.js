@@ -6,15 +6,17 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }, // necesario para Railway
 });
 
-// Crear tabla de repuestos
+// Crear tabla de repuestos (con columnas adaptadas al Excel)
 pool.query(
   `CREATE TABLE IF NOT EXISTS repuestos (
     id SERIAL PRIMARY KEY,
-    categoria TEXT,
-    marca TEXT,
-    modelo TEXT,
     codigo TEXT,
-    descripcion TEXT
+    marca TEXT,
+    entradas INTEGER,
+    salidas INTEGER,
+    stock INTEGER,
+    precios NUMERIC,
+    importe_inventario NUMERIC
   );`,
   (err) => {
     if (err) {
