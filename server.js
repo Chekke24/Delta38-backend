@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
   origin: "https://delta38-frontend.netlify.app", // importante para evitar errores CORS
   methods: ["GET", "POST", "DELETE"],
+  credentials: true
 }));
 
 app.use(express.json());
