@@ -62,28 +62,24 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
     const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
 
     for (const fila of datos) {
-      const {
-        CODIGO: codigo,
-        MARCA: marca,
-        ENTRADAS: entradas,
-        SALIDAS: salidas,
-        STOCK: stock,
-        PRECIOS: precios,
-        "IMPORTE INVENTARIO": importe_inventario
-      } = fila;
+  const codigo = fila["CODIGO"]?.toString().trim() || "";
+  const marca = fila["MARCA"]?.toString().trim() || "";
+  const entradas = parseInt(fila["ENTRADAS"]) || 0;
+  const salidas = parseInt(fila["SALIDAS"]) || 0;
+  const stock = parseInt(fila["STOCK"]) || 0;
 
-      const entradasNum = parseInt(entradas) || 0;
-      const salidasNum = parseInt(salidas) || 0;
-      const stockNum = parseInt(stock) || 0;
-      const preciosNum = precios === "" || precios == null ? null : parseFloat(precios);
-      const importeNum = importe_inventario === "" || importe_inventario == null ? null : parseFloat(importe_inventario);
+  const precios = fila["PRECIOS"];
+  const preciosNum = precios && !isNaN(precios) ? parseFloat(precios) : null;
 
-      await pool.query(
-        `INSERT INTO repuestos (codigo, marca, entradas, salidas, stock, precios, importe_inventario)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [codigo || "", marca || "", entradasNum, salidasNum, stockNum, preciosNum, importeNum]
-      );
-    }
+  const inventario = fila["IMPORTE INVENTARIO"];
+  const inventarioNum = inventario && !isNaN(inventario) ? parseFloat(inventario) : null;
+
+  await pool.query(
+    `INSERT INTO repuestos (codigo, marca, entradas, salidas, stock, precios, importe_inventario)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
+  );
+}
 
     res.json({ message: "✅ Repuestos cargados desde Excel" });
   } catch (error) {
