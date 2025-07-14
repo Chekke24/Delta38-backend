@@ -55,7 +55,6 @@ app.get("/", (req, res) => {
   res.json({ message: "✅ Servidor del taller funcionando con PostgreSQL + Cloudinary + Excel" });
 });
 
-// 📦 Subida de archivo Excel
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
@@ -73,10 +72,16 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
         "IMPORTE INVENTARIO": importe_inventario
       } = fila;
 
+      const entradasNum = parseInt(entradas) || 0;
+      const salidasNum = parseInt(salidas) || 0;
+      const stockNum = parseInt(stock) || 0;
+      const preciosNum = precios === "" || precios == null ? null : parseFloat(precios);
+      const importeNum = importe_inventario === "" || importe_inventario == null ? null : parseFloat(importe_inventario);
+
       await pool.query(
         `INSERT INTO repuestos (codigo, marca, entradas, salidas, stock, precios, importe_inventario)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [codigo || "", marca || "", parseInt(entradas) || 0, parseInt(salidas) || 0, parseInt(stock) || 0, precios || "", importe_inventario || ""]
+        [codigo || "", marca || "", entradasNum, salidasNum, stockNum, preciosNum, importeNum]
       );
     }
 
