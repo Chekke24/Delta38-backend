@@ -11,22 +11,11 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const allowedOrigins = [
-  "http://localhost:3000",                   // frontend local
-  "https://delta38-frontend.netlify.app"    // frontend en producción
-];
-
+// ✅ CORS
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS no permitido"));
-    }
-  },
+  origin: process.env.FRONTEND_URL || "*",
   methods: ["GET", "POST", "DELETE"],
 }));
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -66,35 +55,40 @@ app.get("/", (req, res) => {
   res.json({ message: "✅ Servidor del taller funcionando con PostgreSQL + Cloudinary + Excel" });
 });
 
-// 📦 Subida de archivo Excel
+// 🧾 Carga de stock desde Excel
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.SheetNames.find(name => name.toLowerCase().includes("inventario")) || workbook.SheetNames[0];
-    const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { raw: false });
+
+    const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], {
+      raw: false,
+      defval: "" // previene undefined
+    });
 
     for (const fila of datos) {
-      console.log(fila);
-  const codigo = fila["CODIGO"]?.toString().trim() || "";
-  const marca = fila["MARCA"]?.toString().trim() || "";
-  const entradas = parseInt(fila["ENTRADAS"]) || 0;
-  const salidas = parseInt(fila["SALIDAS"]) || 0;
-  const stock = parseInt(fila["STOCK"]) || 0;
+      const codigo = fila["CODIGO"]?.toString().trim() || "";
+      const marca = fila["MARCA"]?.toString().trim() || "";
 
-  const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
-  const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : 0;
+      const entradas = parseInt(fila["ENTRADAS"]?.toString().replace(/\D/g, "")) || 0;
+      const salidas = parseInt(fila["SALIDAS"]?.toString().replace(/\D/g, "")) || 0;
+      const stock = parseInt(fila["STOCK"]?.toString().replace(/\D/g, "")) || 0;
 
-  const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
-  const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : 0;
+      const preciosStr = fila["PRECIOS"]?.toString().replace(/[^0-9.,]/g, '').replace(',', '.') || '';
+      const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
 
-  console.log("📦 Fila a insertar:", { codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum });
+      const inventarioStr = fila["IMPORTE INVENTARIO"]?.toString().replace(/[^0-9.,]/g, '').replace(',', '.') || '';
+      const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
 
-  await pool.query(
-    `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
-  );
-}
+      // ✅ evitar insertar filas vacías
+      if (!codigo || !marca) continue;
+
+      await pool.query(
+        `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
+      );
+    }
 
     res.json({ message: "✅ Repuestos cargados desde Excel" });
   } catch (error) {
