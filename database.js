@@ -17,13 +17,13 @@ pool.query("DROP TABLE IF EXISTS repuestos", (err) => {
     pool.query(
       `CREATE TABLE IF NOT EXISTS repuestos (
         id SERIAL PRIMARY KEY,
-        CODIGO TEXT,
-        MARCA TEXT,
-        ENTRADAS INTEGER,
-        SALIDAS INTEGER,
-        STOCK INTEGER,
-        PRECIOS NUMERIC,
-        IMPORTE_INVENTARIO NUMERIC
+        "CODIGO" TEXT,
+        "MARCA" TEXT,
+        "ENTRADAS" INTEGER,
+        "SALIDAS" INTEGER,
+        "STOCK" INTEGER,
+        "PRECIOS" NUMERIC,
+        "IMPORTE_INVENTARIO" NUMERIC
       );`,
       (err) => {
         if (err) {

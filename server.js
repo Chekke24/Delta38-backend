@@ -75,7 +75,7 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   const inventarioNum = inventario && !isNaN(inventario) ? parseFloat(inventario) : null;
 
   await pool.query(
-    `INSERT INTO repuestos (codigo, marca, entradas, salidas, stock, precios, importe_inventario)
+    `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE INVENTARIO")
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
   );
