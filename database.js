@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Crear tabla de repuestos si no existe
+//  tabla de repuestos si no existe
 pool.query(
   `CREATE TABLE IF NOT EXISTS repuestos (
     id SERIAL PRIMARY KEY,
@@ -19,12 +19,12 @@ pool.query(
     "IMPORTE_INVENTARIO" NUMERIC
   );`,
   (err) => {
-    if (err) console.error("❌ Error creando tabla repuestos:", err.message);
-    else console.log("✅ Tabla repuestos verificada.");
+    if (err) console.error(" Error creando tabla repuestos:", err.message);
+    else console.log("Tabla repuestos verificada.");
   }
 );
 
-// Tabla imágenes
+// tabla imágenes
 pool.query(
   `CREATE TABLE IF NOT EXISTS imagenes_ilustrativas (
     id SERIAL PRIMARY KEY,
@@ -32,8 +32,8 @@ pool.query(
     url TEXT NOT NULL
   );`,
   (err) => {
-    if (err) console.error("❌ Error creando tabla imágenes:", err.message);
-    else console.log("✅ Tabla imágenes verificada.");
+    if (err) console.error("Error creando tabla imágenes:", err.message);
+    else console.log("Tabla imágenes verificada.");
   }
 );
 

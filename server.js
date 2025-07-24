@@ -12,11 +12,27 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CORS
+
+
+const allowedOrigins = [
+  'https://delta38-frontend.netlify.app',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: "https://delta38-frontend.netlify.app", // importante para evitar errores CORS
-  methods: ["GET", "POST", "DELETE"],
-  credentials: true
+  origin: function (origin, callback) {
+    // Permitir llamadas sin origin (como Postman o preflight)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS bloqueado: origen no permitido'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -83,9 +99,9 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
       );
     }
 
-    res.json({ message: "✅ Repuestos cargados desde Excel" });
+    res.json({ message: "Repuestos cargados desde Excel" });
   } catch (error) {
-    console.error("❌ Error al procesar Excel:", error);
+    console.error("Error al procesar Excel:", error);
     res.status(500).json({ error: "Error al procesar el archivo Excel" });
   }
 });
@@ -94,9 +110,9 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
 app.delete("/stock/eliminar-todo", async (req, res) => {
   try {
     await pool.query("DELETE FROM repuestos");
-    res.json({ message: "✅ Todos los repuestos fueron eliminados." });
+    res.json({ message: "Todos los repuestos fueron eliminados." });
   } catch (error) {
-    console.error("❌ Error al eliminar repuestos:", error);
+    console.error("Error al eliminar repuestos:", error);
     res.status(500).json({ error: "Error al eliminar repuestos" });
   }
 });
@@ -116,9 +132,9 @@ app.post("/imagenes", uploadImages.array("imagenes", 10), async (req, res) => {
       );
     }
 
-    res.json({ message: "✅ Imágenes ilustrativas guardadas" });
+    res.json({ message: "Imágenes ilustrativas guardadas" });
   } catch (error) {
-    console.error("❌ Error al subir imágenes:", error);
+    console.error("Error al subir imágenes:", error);
     res.status(500).json({ error: "Error al subir imágenes ilustrativas" });
   }
 });
@@ -147,12 +163,13 @@ app.get("/repuestos", async (req, res) => {
       imagenIlustrativa: imagen.rows[0]?.url || null
     });
   } catch (err) {
-    console.error("❌ Error al buscar repuestos:", err);
+    console.error("Error al buscar repuestos:", err);
     res.status(500).json({ error: "Error al buscar repuestos" });
   }
 });
 
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
+
