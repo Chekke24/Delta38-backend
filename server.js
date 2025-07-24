@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // === CORS ===
 const allowedOrigins = [
-  'https://delta38-frontend.netlify.app',
+  process.env.FRONTEND_URL,
   'http://localhost:3000'
 ];
 
