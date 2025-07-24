@@ -11,9 +11,7 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS
-
-
+// === CORS ===
 const allowedOrigins = [
   'https://delta38-frontend.netlify.app',
   'http://localhost:3000'
@@ -21,7 +19,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir llamadas sin origin (como Postman o preflight)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -33,18 +30,17 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Cloudinary
+// === CLOUDINARY CONFIG ===
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Multer - Cloudinary
+// === MULTER: Cloudinary Storage ===
 const imageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -55,7 +51,7 @@ const imageStorage = new CloudinaryStorage({
 });
 const uploadImages = multer({ storage: imageStorage });
 
-// Multer - Excel en memoria
+// === MULTER: Excel Memory Storage ===
 const uploadExcel = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
@@ -67,59 +63,71 @@ const uploadExcel = multer({
   }
 });
 
-// Ruta base
+// === RUTA BASE ===
 app.get("/", (req, res) => {
   res.json({ message: "✅ Servidor funcionando con PostgreSQL + Cloudinary + Excel" });
 });
 
-// Cargar Excel
+// === CARGA DE EXCEL ===
 app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
   try {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.SheetNames.find(name => name.toLowerCase().includes("inventario")) || workbook.SheetNames[0];
-    const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { raw: false });
+    const sheet = workbook.SheetNames.find(name =>
+      name.toLowerCase().includes("inventario")
+    ) || workbook.SheetNames[0];
+
+    const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], {
+      range: 3,        // Comienza desde la fila 4 (índice 3)
+      defval: "",      // Evita undefined
+      raw: false
+    });
+
+    let cargados = 0;
 
     for (const fila of datos) {
-  // No normalizamos claves, asumimos que vienen exactamente como en el Excel
-  const codigo = fila["CODIGO"]?.toString().trim() || "";
-  const marca = fila["MARCA"]?.toString().trim() || "";
-  const entradas = parseInt(fila["ENTRADAS"]) || 0;
-  const salidas = parseInt(fila["SALIDAS"]) || 0;
-  const stock = parseInt(fila["STOCK"]) || 0;
+      const codigo = fila["CODIGO"]?.toString().trim();
+      const marca = fila["MARCA"]?.toString().trim();
+      const entradas = parseInt(fila["ENTRADAS"]) || 0;
+      const salidas = parseInt(fila["SALIDAS"]) || 0;
+      const stock = parseInt(fila["STOCK"]) || 0;
 
-  const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
-  const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
+      const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
+      const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
 
-  const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
-  const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
+      const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
+      const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
 
-  await pool.query(
-    `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
-  );
-}
+      // Saltear fila vacía
+      if (!codigo && !marca && !stock) continue;
 
+      await pool.query(
+        `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
+      );
 
-    res.json({ message: "Repuestos cargados desde Excel" });
+      cargados++;
+    }
+
+    res.json({ message: `✅ Se cargaron ${cargados} repuestos desde Excel.` });
   } catch (error) {
-    console.error("Error al procesar Excel:", error);
+    console.error("❌ Error al procesar Excel:", error);
     res.status(500).json({ error: "Error al procesar el archivo Excel" });
   }
 });
 
-// Eliminar todos los repuestos
+// === ELIMINAR TODOS LOS REPUESTOS ===
 app.delete("/stock/eliminar-todo", async (req, res) => {
   try {
     await pool.query("DELETE FROM repuestos");
-    res.json({ message: "Todos los repuestos fueron eliminados." });
+    res.json({ message: "🗑️ Todos los repuestos fueron eliminados." });
   } catch (error) {
     console.error("Error al eliminar repuestos:", error);
     res.status(500).json({ error: "Error al eliminar repuestos" });
   }
 });
 
-// Subida de imágenes
+// === SUBIDA DE IMÁGENES ===
 app.post("/imagenes", uploadImages.array("imagenes", 10), async (req, res) => {
   try {
     for (let i = 0; i < req.files.length; i++) {
@@ -134,14 +142,14 @@ app.post("/imagenes", uploadImages.array("imagenes", 10), async (req, res) => {
       );
     }
 
-    res.json({ message: "Imágenes ilustrativas guardadas" });
+    res.json({ message: "🖼️ Imágenes ilustrativas guardadas correctamente" });
   } catch (error) {
     console.error("Error al subir imágenes:", error);
     res.status(500).json({ error: "Error al subir imágenes ilustrativas" });
   }
 });
 
-// Buscador
+// === BUSCADOR DE REPUESTOS ===
 app.get("/repuestos", async (req, res) => {
   const { query } = req.query;
   if (!query) return res.status(400).json({ error: "Falta el parámetro de búsqueda" });
@@ -170,8 +178,7 @@ app.get("/repuestos", async (req, res) => {
   }
 });
 
-// Iniciar servidor
+// === INICIO DEL SERVIDOR ===
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });
-
