@@ -80,24 +80,26 @@ app.post("/stock/excel", uploadExcel.single("archivo"), async (req, res) => {
     const datos = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { raw: false });
 
     for (const fila of datos) {
-      const codigo = fila["CODIGO"]?.toString().trim() || "";
-      const marca = fila["MARCA"]?.toString().trim() || "";
-      const entradas = parseInt(fila["ENTRADAS"]) || 0;
-      const salidas = parseInt(fila["SALIDAS"]) || 0;
-      const stock = parseInt(fila["STOCK"]) || 0;
+  // No normalizamos claves, asumimos que vienen exactamente como en el Excel
+  const codigo = fila["CODIGO"]?.toString().trim() || "";
+  const marca = fila["MARCA"]?.toString().trim() || "";
+  const entradas = parseInt(fila["ENTRADAS"]) || 0;
+  const salidas = parseInt(fila["SALIDAS"]) || 0;
+  const stock = parseInt(fila["STOCK"]) || 0;
 
-      const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
-      const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
+  const preciosStr = fila["PRECIOS"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
+  const preciosNum = preciosStr && !isNaN(preciosStr) ? parseFloat(preciosStr) : null;
 
-      const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
-      const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
+  const inventarioStr = fila["IMPORTE_INVENTARIO"]?.toString().replace(/[$\s-]/g, '').replace(',', '.') || '';
+  const inventarioNum = inventarioStr && !isNaN(inventarioStr) ? parseFloat(inventarioStr) : null;
 
-      await pool.query(
-        `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
-      );
-    }
+  await pool.query(
+    `INSERT INTO repuestos ("CODIGO", "MARCA", "ENTRADAS", "SALIDAS", "STOCK", "PRECIOS", "IMPORTE_INVENTARIO")
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [codigo, marca, entradas, salidas, stock, preciosNum, inventarioNum]
+  );
+}
+
 
     res.json({ message: "Repuestos cargados desde Excel" });
   } catch (error) {
